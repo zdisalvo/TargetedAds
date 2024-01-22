@@ -1,17 +1,21 @@
 package com.amazon.ata.advertising.service.businesslogic;
 
+import com.amazon.ata.advertising.service.dao.CustomerProfileDao;
 import com.amazon.ata.advertising.service.dao.ReadableDao;
-import com.amazon.ata.advertising.service.model.AdvertisementContent;
-import com.amazon.ata.advertising.service.model.EmptyGeneratedAdvertisement;
-import com.amazon.ata.advertising.service.model.GeneratedAdvertisement;
+import com.amazon.ata.advertising.service.model.*;
+import com.amazon.ata.advertising.service.targeting.TargetingEvaluator;
 import com.amazon.ata.advertising.service.targeting.TargetingGroup;
 
+import com.amazon.ata.advertising.service.targeting.predicate.TargetingPredicate;
+import com.amazon.ata.advertising.service.targeting.predicate.TargetingPredicateResult;
+import com.amazon.ata.customerservice.CustomerProfile;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 
 /**
@@ -23,6 +27,11 @@ public class AdvertisementSelectionLogic {
 
     private final ReadableDao<String, List<AdvertisementContent>> contentDao;
     private final ReadableDao<String, List<TargetingGroup>> targetingGroupDao;
+
+    //TODO
+    //private final ReadableDao<String, List<CustomerProfile>> customerProfileDao;
+
+    //todo
     private Random random = new Random();
 
     /**
@@ -35,6 +44,7 @@ public class AdvertisementSelectionLogic {
                                        ReadableDao<String, List<TargetingGroup>> targetingGroupDao) {
         this.contentDao = contentDao;
         this.targetingGroupDao = targetingGroupDao;
+
     }
 
     /**
@@ -56,19 +66,56 @@ public class AdvertisementSelectionLogic {
      *     not be generated.
      */
     public GeneratedAdvertisement selectAdvertisement(String customerId, String marketplaceId) {
-        GeneratedAdvertisement generatedAdvertisement = new EmptyGeneratedAdvertisement();
-        if (StringUtils.isEmpty(marketplaceId)) {
-            LOG.warn("MarketplaceId cannot be null or empty. Returning empty ad.");
-        } else {
-            final List<AdvertisementContent> contents = contentDao.get(marketplaceId);
+//        GeneratedAdvertisement generatedAdvertisement = new EmptyGeneratedAdvertisement();
+//        if (StringUtils.isEmpty(marketplaceId)) {
+//            LOG.warn("MarketplaceId cannot be null or empty. Returning empty ad.");
+//        } else {
+//            final List<AdvertisementContent> contents = contentDao.get(marketplaceId);
+//
+//            if (CollectionUtils.isNotEmpty(contents)) {
+//                AdvertisementContent randomAdvertisementContent = contents.get(random.nextInt(contents.size()));
+//                generatedAdvertisement = new GeneratedAdvertisement(randomAdvertisementContent);
+//            }
+//
+//        }
+//
+//        return generatedAdvertisement;
+//
+        List<AdvertisementContent> contents = contentDao.get(marketplaceId);
 
-            if (CollectionUtils.isNotEmpty(contents)) {
-                AdvertisementContent randomAdvertisementContent = contents.get(random.nextInt(contents.size()));
-                generatedAdvertisement = new GeneratedAdvertisement(randomAdvertisementContent);
-            }
+        RequestContext requestContext = new RequestContext(customerId, marketplaceId);
 
+        TargetingEvaluator targetingEvaluator = new TargetingEvaluator(requestContext);
+
+        //List<TargetingGroup> targetingGroups = targetingGroupDao.get(contents.get(0).getContentId());
+
+
+
+        List<TargetingGroup> targetingGroups = contents.stream()
+                .map(content -> targetingGroupDao.get(content.getContentId()))
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
+
+        TargetingPredicateResult targetingPredicateResult = targetingGroups.stream()
+                .map(targetingGroup ->  targetingEvaluator.evaluate(targetingGroup))
+                .filter(targetingPredicateResult1 -> targetingPredicateResult1.isTrue())
+                .findFirst().get();
+
+        if (targetingPredicateResult == null || targetingPredicateResult.isTrue()) {
+
+
+            return contents.stream()
+                    .filter(advertisementContent -> advertisementContent.getMarketplaceId().equals(marketplaceId))
+                    .collect(Collectors.collectingAndThen(Collectors.toList(), list -> {
+                        Collections.shuffle(list);
+                        return list;
+                    }))
+                    .stream().findFirst()
+                    .map(advertisementContent -> new GeneratedAdvertisement(advertisementContent))
+                    .orElse(new EmptyGeneratedAdvertisement());
         }
 
-        return generatedAdvertisement;
+        return new EmptyGeneratedAdvertisement();
+
     }
 }
