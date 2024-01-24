@@ -2,6 +2,7 @@ package com.amazon.ata.advertising.service.businesslogic;
 
 import com.amazon.ata.advertising.service.dao.CustomerProfileDao;
 import com.amazon.ata.advertising.service.dao.ReadableDao;
+import com.amazon.ata.advertising.service.dao.TargetingGroupDaoExecutor;
 import com.amazon.ata.advertising.service.model.*;
 import com.amazon.ata.advertising.service.targeting.TargetingEvaluator;
 import com.amazon.ata.advertising.service.targeting.TargetingGroup;
@@ -15,6 +16,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 
@@ -65,7 +69,7 @@ public class AdvertisementSelectionLogic {
      * @return an advertisement customized for the customer id provided, or an empty advertisement if one could
      *     not be generated.
      */
-    public GeneratedAdvertisement selectAdvertisement(String customerId, String marketplaceId) {
+    public GeneratedAdvertisement selectAdvertisement(String customerId, String marketplaceId) throws Exception {
 //        GeneratedAdvertisement generatedAdvertisement = new EmptyGeneratedAdvertisement();
 //        if (StringUtils.isEmpty(marketplaceId)) {
 //            LOG.warn("MarketplaceId cannot be null or empty. Returning empty ad.");
@@ -89,10 +93,25 @@ public class AdvertisementSelectionLogic {
 
         //List<TargetingGroup> targetingGroups = targetingGroupDao.get(contents.get(0).getContentId());
 
+        ExecutorService executor = Executors.newCachedThreadPool();
 
+        List<List<TargetingGroup>> targetingGroupsList = new ArrayList<>();
 
-        List<TargetingGroup> targetingGroups = contents.stream()
-                .map(content -> targetingGroupDao.get(content.getContentId()))
+        for (AdvertisementContent content : contents) {
+            TargetingGroupDaoExecutor targetingGroupDaoExecutor = new TargetingGroupDaoExecutor(targetingGroupDao, content.getContentId());
+
+            Future<List<TargetingGroup>> targetingListFuture = executor.submit(targetingGroupDaoExecutor);
+            targetingGroupsList.add(targetingListFuture.get());
+        }
+
+        executor.shutdown();
+
+//        List<TargetingGroup> targetingGroups = contents.stream()
+//                .map(content -> executor.submit(targetingGroupDao.get(content.getContentId())))
+//                .flatMap(List::stream)
+//                .collect(Collectors.toList());
+
+        List<TargetingGroup> targetingGroups = targetingGroupsList.stream()
                 .flatMap(List::stream)
                 .collect(Collectors.toList());
 

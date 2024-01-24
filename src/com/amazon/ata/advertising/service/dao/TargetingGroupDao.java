@@ -15,7 +15,7 @@ import javax.inject.Inject;
 /**
  * Gets the TargetingGroups for a piece of ATA ad content.
  */
-public class TargetingGroupDao implements ReadableDao<String, List<TargetingGroup>> {
+public class TargetingGroupDao implements ReadableDao<String, List<TargetingGroup>>, Runnable {
     private final TargetingPredicateInjector targetingPredicateInjector;
     private final DynamoDBMapper mapper;
 
@@ -84,5 +84,10 @@ public class TargetingGroupDao implements ReadableDao<String, List<TargetingGrou
         List<TargetingGroup> targetingGroups = get(contentId);
         mapper.batchDelete(targetingGroups);
         return targetingGroups;
+    }
+
+    @Override
+    public void run() {
+
     }
 }

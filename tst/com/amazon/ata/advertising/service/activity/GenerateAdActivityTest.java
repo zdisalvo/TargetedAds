@@ -50,7 +50,7 @@ public class GenerateAdActivityTest {
     }
 
     @Test
-    public void testGenerateAd_advertisementReturned() {
+    public void testGenerateAd_advertisementReturned() throws Exception {
         when(adSelectionService.selectAdvertisement(CUSTOMER_ID, MARKETPLACE_ID)).thenReturn(GENERATED_ADVERTISEMENT);
         final GenerateAdvertisementResponse response = activity.generateAd(REQUEST);
 
@@ -60,7 +60,7 @@ public class GenerateAdActivityTest {
     }
 
     @Test
-    public void testGenerateAd_emptyAdvertisementReturned() {
+    public void testGenerateAd_emptyAdvertisementReturned() throws Exception {
         when(adSelectionService.selectAdvertisement(CUSTOMER_ID, MARKETPLACE_ID)).thenReturn(EMPTY_GENERATED_ADVERTISEMENT);
         final GenerateAdvertisementResponse response = activity.generateAd(REQUEST);
 
@@ -70,7 +70,7 @@ public class GenerateAdActivityTest {
     }
 
     @Test
-    public void whenExceptionThrown_emptyAdvertisementReturned() {
+    public void whenExceptionThrown_emptyAdvertisementReturned() throws Exception {
         when(adSelectionService.selectAdvertisement(CUSTOMER_ID, MARKETPLACE_ID)).thenThrow(new RuntimeException());
         final GenerateAdvertisementResponse response = activity.generateAd(REQUEST);
 

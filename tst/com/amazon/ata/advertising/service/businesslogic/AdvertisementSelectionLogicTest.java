@@ -54,19 +54,19 @@ public class AdvertisementSelectionLogicTest {
     }
 
     @Test
-    public void selectAdvertisement_nullMarketplaceId_EmptyAdReturned() {
+    public void selectAdvertisement_nullMarketplaceId_EmptyAdReturned() throws Exception {
         GeneratedAdvertisement ad = adSelectionService.selectAdvertisement(CUSTOMER_ID, null);
         assertTrue(ad instanceof EmptyGeneratedAdvertisement);
     }
 
     @Test
-    public void selectAdvertisement_emptyMarketplaceId_EmptyAdReturned() {
+    public void selectAdvertisement_emptyMarketplaceId_EmptyAdReturned() throws Exception {
         GeneratedAdvertisement ad = adSelectionService.selectAdvertisement(CUSTOMER_ID, "");
         assertTrue(ad instanceof EmptyGeneratedAdvertisement);
     }
 
     @Test
-    public void selectAdvertisement_noContentForMarketplace_emptyAdReturned() throws InterruptedException {
+    public void selectAdvertisement_noContentForMarketplace_emptyAdReturned() throws Exception {
         when(contentDao.get(MARKETPLACE_ID)).thenReturn(Collections.emptyList());
 
         GeneratedAdvertisement ad = adSelectionService.selectAdvertisement(CUSTOMER_ID, MARKETPLACE_ID);
@@ -76,7 +76,7 @@ public class AdvertisementSelectionLogicTest {
 
 
     @Test
-    public void selectAdvertisement_oneAd_returnsAd() {
+    public void selectAdvertisement_oneAd_returnsAd() throws Exception {
         List<AdvertisementContent> contents = Arrays.asList(CONTENT1);
         when(contentDao.get(MARKETPLACE_ID)).thenReturn(contents);
         when(random.nextInt(contents.size())).thenReturn(0);
@@ -86,7 +86,7 @@ public class AdvertisementSelectionLogicTest {
     }
 
     @Test
-    public void selectAdvertisement_multipleAds_returnsOneRandom() {
+    public void selectAdvertisement_multipleAds_returnsOneRandom() throws Exception {
         List<AdvertisementContent> contents = Arrays.asList(CONTENT1, CONTENT2, CONTENT3);
         when(contentDao.get(MARKETPLACE_ID)).thenReturn(contents);
         when(random.nextInt(contents.size())).thenReturn(1);
