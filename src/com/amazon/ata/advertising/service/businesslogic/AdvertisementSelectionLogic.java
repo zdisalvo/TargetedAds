@@ -106,6 +106,7 @@ public class AdvertisementSelectionLogic {
 
         executor.shutdown();
 
+
 //        List<TargetingGroup> targetingGroups = contents.stream()
 //                .map(content -> executor.submit(targetingGroupDao.get(content.getContentId())))
 //                .flatMap(List::stream)
@@ -115,24 +116,48 @@ public class AdvertisementSelectionLogic {
                 .flatMap(List::stream)
                 .collect(Collectors.toList());
 
-        TargetingPredicateResult targetingPredicateResult = targetingGroups.stream()
-                .map(targetingGroup ->  targetingEvaluator.evaluate(targetingGroup))
-                .filter(targetingPredicateResult1 -> targetingPredicateResult1.isTrue())
-                .findFirst().get();
-
-        if (targetingPredicateResult == null || targetingPredicateResult.isTrue()) {
 
 
-            return contents.stream()
-                    .filter(advertisementContent -> advertisementContent.getMarketplaceId().equals(marketplaceId))
-                    .collect(Collectors.collectingAndThen(Collectors.toList(), list -> {
-                        Collections.shuffle(list);
-                        return list;
-                    }))
-                    .stream().findFirst()
-                    .map(advertisementContent -> new GeneratedAdvertisement(advertisementContent))
-                    .orElse(new EmptyGeneratedAdvertisement());
+        //Mastery Task 1
+//        TargetingPredicateResult targetingPredicateResult = targetingGroups.stream()
+//                .map(targetingGroup ->  targetingEvaluator.evaluate(targetingGroup))
+//                .filter(targetingPredicateResult1 -> targetingPredicateResult1.isTrue())
+//                .findFirst().get();
+
+
+        Map<Double, TargetingGroup> targetingGroupMap = targetingGroups.stream()
+                .filter(targetingGroup -> targetingEvaluator.evaluate(targetingGroup) == TargetingPredicateResult.TRUE)
+                .collect(Collectors.toMap(TargetingGroup::getClickThroughRate, targetingGroup -> targetingGroup));
+
+        Map<Double, TargetingGroup> sortedTargetingGroupMap = new TreeMap<>(Comparator.reverseOrder());
+        sortedTargetingGroupMap.putAll(targetingGroupMap);
+
+        List<AdvertisementContent> filteredContents = contents.stream()
+                .filter(advertisementContent -> advertisementContent.getMarketplaceId().equals(marketplaceId))
+                .collect(Collectors.toList());
+
+        for (Map.Entry<Double, TargetingGroup> entry : sortedTargetingGroupMap.entrySet()) {
+            for (AdvertisementContent content : filteredContents) {
+                if (entry.getValue().getContentId().equals(content.getContentId())){
+                    return new GeneratedAdvertisement(content);
+                }
+            }
+
         }
+
+//        if (targetingPredicateResult == null || targetingPredicateResult.isTrue()) {
+//
+//
+//            return contents.stream()
+//                    .filter(advertisementContent -> advertisementContent.getMarketplaceId().equals(marketplaceId))
+//                    .collect(Collectors.collectingAndThen(Collectors.toList(), list -> {
+//                        Collections.shuffle(list);
+//                        return list;
+//                    }))
+//                    .stream().findFirst()
+//                    .map(advertisementContent -> new GeneratedAdvertisement(advertisementContent))
+//                    .orElse(new EmptyGeneratedAdvertisement());
+//        }
 
         return new EmptyGeneratedAdvertisement();
 
